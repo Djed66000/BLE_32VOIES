@@ -2,26 +2,59 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contrôle Pico 32CH</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pico 32CH Compact</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 10px; }
-        .header { background: white; padding: 15px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; padding: 10px; }
-        .card { background: white; padding: 10px; border-radius: 12px; border: 1px solid #ddd; }
-        button { padding: 10px; font-size: 0.9rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-conn { background: #007bff; color: white; width: 100%; margin-bottom: 10px; font-size: 1.1rem; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 5px; }
         
-        .presets { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
-        .btn-preset { background: #007bff; color: white; flex: 1; min-width: 60px; }
-        .btn-preset:active { background: #0056b3; }
+        /* En-tête compact fixe */
+        .header { 
+            background: white; padding: 10px; border-radius: 0 0 15px 15px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; 
+        }
         
-        .btn-scale { background: #6c757d; color: white; flex: 1; }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+            gap: 6px; padding: 5px; margin-top: 5px;
+        }
+        
+        /* Bloc curseur réduit */
+        .card { 
+            background: white; padding: 6px 10px; border-radius: 8px; 
+            border: 1px solid #ddd; display: flex; flex-direction: column;
+        }
+
+        /* Ligne Voie : Valeur */
+        .info-line { 
+            display: flex; justify-content: space-between; 
+            font-size: 0.85rem; font-weight: bold; margin-bottom: 2px;
+        }
+        
+        .val-num { color: #007bff; }
+
+        button { padding: 8px; font-size: 0.85rem; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-conn { background: #007bff; color: white; width: 100%; margin-bottom: 8px; }
+        
+        .presets { display: flex; gap: 4px; margin-top: 8px; }
+        .btn-preset { background: #007bff; color: white; flex: 1; padding: 6px 0; font-size: 0.8rem; }
+        
+        .btn-scale { background: #6c757d; color: white; flex: 1; padding: 6px 0; }
         .active { background: #e67e22 !important; }
         
-        input[type=range] { width: 100%; height: 35px; margin-top: 5px; }
-        .val-num { font-weight: bold; color: #007bff; font-size: 1.1rem; }
-        .flex { display: flex; gap: 10px; margin-bottom: 10px; }
+        /* Curseur plus fin */
+        input[type=range] { 
+            width: 100%; margin: 4px 0; height: 20px; -webkit-appearance: none; background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: #ddd; border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px; width: 18px; border-radius: 50%; background: #007bff;
+            cursor: pointer; -webkit-appearance: none; margin-top: -6px;
+        }
+
+        .flex { display: flex; gap: 8px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -30,8 +63,8 @@
     <button id="btn" class="btn-conn" onclick="connect()">SE CONNECTER</button>
     
     <div class="flex">
-        <button id="b100" class="btn-scale active" onclick="setScale(100)">Échelle 100</button>
-        <button id="b1000" class="btn-scale" onclick="setScale(1000)">Échelle 1000</button>
+        <button id="b100" class="btn-scale active" onclick="setScale(100)">100</button>
+        <button id="b1000" class="btn-scale" onclick="setScale(1000)">1000</button>
     </div>
 
     <div class="presets">
@@ -50,16 +83,16 @@
     let device;
     let maxVal = 100;
 
-    // Création des 32 curseurs numérotés de 1 à 32
     const ui = document.getElementById('ui');
     for (let i = 1; i <= 32; i++) {
-        // L'index envoyé au Pico reste 0-31 pour le code Python
-        let picoIdx = i - 1; 
+        let pIdx = i - 1; 
         ui.innerHTML += `
             <div class="card">
-                <small>VOIE ${i}</small><br>
-                <span class="val-num" id="v${picoIdx}">0</span><br>
-                <input type="range" id="s${picoIdx}" min="0" max="100" value="0" oninput="send(${picoIdx}, this.value)">
+                <div class="info-line">
+                    <span>V${i}</span>
+                    <span class="val-num" id="v${pIdx}">0</span>
+                </div>
+                <input type="range" id="s${pIdx}" min="0" max="100" value="0" oninput="send(${pIdx}, this.value)">
             </div>`;
     }
 
@@ -91,25 +124,19 @@
 
             document.getElementById('btn').innerText = "CONNECTÉ ✅";
             document.getElementById('btn').style.background = "#28a745";
+            setAllTo(0, false); 
 
         } catch (e) { alert("Erreur : " + e); }
     }
 
-    // Fonction pour les boutons 0%, 25%, 50%, 75%, 100%
-    async function setAllTo(percentage) {
-        // Calcul de la valeur selon l'échelle actuelle
-        let targetValue = Math.round((percentage / 100) * maxVal);
-        
+    async function setAllTo(pct, sendToPico = true) {
+        let target = Math.round((pct / 100) * maxVal);
         for (let i = 0; i < 32; i++) {
-            document.getElementById('s' + i).value = targetValue;
-            document.getElementById('v' + i).innerText = targetValue;
-            
-            if (rx) {
-                try {
-                    const data = new TextEncoder().encode(i + ":" + targetValue);
-                    // On utilise writeValue sans await pour aller plus vite sur les 32 envois
-                    rx.writeValue(data); 
-                } catch (err) { }
+            document.getElementById('s' + i).value = target;
+            document.getElementById('v' + i).innerText = target;
+            if (sendToPico && rx) {
+                const d = new TextEncoder().encode(i + ":" + target);
+                rx.writeValue(d); 
             }
         }
     }
@@ -118,8 +145,8 @@
         document.getElementById('v' + idx).innerText = val;
         if (rx) {
             try {
-                const data = new TextEncoder().encode(idx + ":" + val);
-                await rx.writeValue(data);
+                const d = new TextEncoder().encode(idx + ":" + val);
+                await rx.writeValue(d);
             } catch (err) { }
         }
     }
