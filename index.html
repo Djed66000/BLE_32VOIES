@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -65,28 +65,42 @@
     let device; // On déclare device en dehors pour y avoir accès partout
 
     async function connect() {
-       try {
+        try {
             device = await navigator.bluetooth.requestDevice({
             filters: [{ name: 'P32' }],
             optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-           });
+        });
 
-        // Écouter l'événement de déconnexion
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
         const server = await device.gatt.connect();
         const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
         rx = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
 
-        // Mise à jour visuelle du bouton
+        // --- NOUVEAU : RÉINITIALISATION À ZÉRO ---
+        for (let i = 0; i < 32; i++) {
+            // Remise à zéro visuelle du curseur
+            const slider = document.getElementById('s' + i);
+            if (slider) slider.value = 0;
+
+            // Remise à zéro du texte affiché
+            const label = document.getElementById('v' + i);
+            if (label) label.innerText = "0";
+            
+            // OPTIONNEL : Envoyer l'ordre au Pico de tout mettre à 0
+            // const data = new TextEncoder().encode(i + ":0");
+            // await rx.writeValue(data);
+        }
+        // ----------------------------------------
+
         const btn = document.getElementById('btn');
         btn.innerText = "CONNECTÉ ✅";
         btn.style.background = "#28a745";
         
-       } catch (e) { 
+        } catch (e) { 
             console.log("Erreur : " + e); 
-             onDisconnected(); // Remise à zéro si la connexion échoue
-         }
+            onDisconnected(); 
+        }
     }
 
     // Cette fonction est appelée automatiquement quand le lien est rompu
@@ -110,3 +124,4 @@
 </body>
 
 </html>
+
