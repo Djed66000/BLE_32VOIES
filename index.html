@@ -1,127 +1,111 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pico 2W 32CH Control</title>
+    <title>Pico 32CH Control</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f2f5; padding: 15px; }
-        .header { background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-        .card { background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        button { padding: 12px 24px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-        .btn-connect { background: #007bff; color: white; width: 100%; margin-bottom: 10px; }
-        .btn-scale { background: #6c757d; color: white; }
-        .active-scale { background: #e67e22 !important; }
-        input[type=range] { width: 100%; height: 35px; cursor: pointer; }
-        .val-num { font-weight: bold; color: #007bff; font-size: 1.2rem; }
+        body { font-family: sans-serif; text-align: center; background: #f0f0f0; margin: 0; padding: 10px; }
+        .header { background: white; padding: 15px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; padding: 10px; }
+        .card { background: white; padding: 10px; border-radius: 12px; border: 1px solid #ddd; }
+        button { padding: 12px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-conn { background: #007bff; color: white; width: 100%; margin-bottom: 10px; }
+        .btn-raz { background: #d9534f; color: white; width: 100%; margin-top: 10px; }
+        .btn-scale { background: #6c757d; color: white; margin: 0 5px; flex: 1; }
+        .active { background: #e67e22 !important; }
+        input[type=range] { width: 100%; height: 35px; }
+        .val-num { font-weight: bold; color: #007bff; font-size: 1.1rem; }
+        .flex { display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>Contrôle 32 Voies</h1>
-    <button id="connBtn" class="btn-connect" onclick="connect()">1. Se connecter au Pico</button>
-    <div style="margin-top: 10px;">
-        <span>Échelle : </span>
-        <button id="s100" class="btn-scale active-scale" onclick="setScale(100)">0-100</button>
-        <button id="s1000" class="btn-scale" onclick="setScale(1000)">0-1000</button>
+    <button id="btn" class="btn-conn" onclick="connect()">SE CONNECTER</button>
+    
+    <div class="flex">
+        <button id="b100" class="btn-scale active" onclick="setScale(100)">0-100</button>
+        <button id="b1000" class="btn-scale" onclick="setScale(1000)">0-1000</button>
     </div>
+
+    <button id="raz" class="btn-raz" onclick="resetAll()">⚠️ TOUT À ZÉRO (RAZ)</button>
 </div>
 
-<div id="ui" class="grid" style="display:none;"></div>
+<div id="ui" class="grid"></div>
 
 <script>
-    let rxChar;
-    let maxScale = 100;
-    const ui = document.getElementById('ui');
+    let rx;
+    let device;
+    let maxVal = 100;
 
-    // Génération des 32 curseurs
+    // Création initiale des 32 sliders
+    const ui = document.getElementById('ui');
     for (let i = 0; i < 32; i++) {
         ui.innerHTML += `
             <div class="card">
-                <label>Voie ${i.toString().padStart(2, '0')}</label><br>
+                <small>CH ${i}</small><br>
                 <span class="val-num" id="v${i}">0</span><br>
-                <input type="range" id="slider${i}" min="0" max="100" value="0" oninput="sendData(${i}, this.value)">
-            </div>
-        `;
+                <input type="range" id="s${i}" min="0" max="100" value="0" oninput="send(${i}, this.value)">
+            </div>`;
     }
 
-    function setScale(val) {
-        maxScale = val;
-        document.getElementById('s100').classList.toggle('active-scale', val === 100);
-        document.getElementById('s1000').classList.toggle('active-scale', val === 1000);
-        
-        // On met à jour tous les sliders
+    function setScale(s) {
+        maxVal = s;
+        document.getElementById('b100').classList.toggle('active', s === 100);
+        document.getElementById('b1000').classList.toggle('active', s === 1000);
         for (let i = 0; i < 32; i++) {
-            let s = document.getElementById('slider'+i);
-            let currentPct = s.value / s.max;
-            s.max = maxScale;
-            s.value = Math.round(currentPct * maxScale);
-            document.getElementById('v'+i).innerText = s.value;
+            document.getElementById('s' + i).max = s;
         }
     }
-
-    let device; // On déclare device en dehors pour y avoir accès partout
 
     async function connect() {
         try {
             device = await navigator.bluetooth.requestDevice({
-            filters: [{ name: 'P32' }],
-            optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-        });
+                filters: [{ name: 'P32' }],
+                optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+            });
 
-        device.addEventListener('gattserverdisconnected', onDisconnected);
+            device.addEventListener('gattserverdisconnected', () => {
+                document.getElementById('btn').innerText = "SE CONNECTER";
+                document.getElementById('btn').style.background = "#007bff";
+                rx = null;
+            });
 
-        const server = await device.gatt.connect();
-        const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-        rx = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+            rx = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
 
-        // --- NOUVEAU : RÉINITIALISATION À ZÉRO ---
-        for (let i = 0; i < 32; i++) {
-            // Remise à zéro visuelle du curseur
-            const slider = document.getElementById('s' + i);
-            if (slider) slider.value = 0;
-
-            // Remise à zéro du texte affiché
-            const label = document.getElementById('v' + i);
-            if (label) label.innerText = "0";
+            document.getElementById('btn').innerText = "CONNECTÉ ✅";
+            document.getElementById('btn').style.background = "#28a745";
             
-            // OPTIONNEL : Envoyer l'ordre au Pico de tout mettre à 0
-            // const data = new TextEncoder().encode(i + ":0");
-            // await rx.writeValue(data);
-        }
-        // ----------------------------------------
+            // On force la mise à zéro graphique à la connexion
+            resetAll(false); 
 
-        const btn = document.getElementById('btn');
-        btn.innerText = "CONNECTÉ ✅";
-        btn.style.background = "#28a745";
-        
-        } catch (e) { 
-            console.log("Erreur : " + e); 
-            onDisconnected(); 
+        } catch (e) { alert("Erreur : " + e); }
+    }
+
+    async function resetAll(sendToPico = true) {
+        for (let i = 0; i < 32; i++) {
+            document.getElementById('s' + i).value = 0;
+            document.getElementById('v' + i).innerText = "0";
+            if (sendToPico && rx) {
+                // On envoie l'ordre au Pico (attention: Bluefy peut être lent sur 32 messages)
+                const data = new TextEncoder().encode(i + ":0");
+                await rx.writeValue(data);
+            }
         }
     }
 
-    // Cette fonction est appelée automatiquement quand le lien est rompu
-    function onDisconnected() {
-        const btn = document.getElementById('btn');
-        btn.innerText = "SE CONNECTER AU PICO";
-        btn.style.background = "#007bff";
-        rx = null; // On vide la caractéristique pour éviter d'envoyer dans le vide
-        console.log("Appareil déconnecté");
-      }
-
-    function sendData(index, value) {
-        document.getElementById('v' + index).innerText = value;
-        if (rxChar) {
-            const data = new TextEncoder().encode(index + ":" + value);
-            // writeValue est plus lent mais plus fiable que WithoutResponse pour le débug
-            rxChar.writeValue(data).catch(() => {});
+    async function send(idx, val) {
+        document.getElementById('v' + idx).innerText = val;
+        if (rx) {
+            try {
+                const data = new TextEncoder().encode(idx + ":" + val);
+                await rx.writeValue(data);
+            } catch (err) { }
         }
     }
 </script>
 </body>
-
 </html>
-
