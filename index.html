@@ -62,22 +62,41 @@
         }
     }
 
+    let device; // On déclare device en dehors pour y avoir accès partout
+
     async function connect() {
-        try {
-            const device = await navigator.bluetooth.requestDevice({
-            // On cherche le nouveau nom court
-            filters: [{ name: 'P32' }], 
+       try {
+            device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: 'P32' }],
             optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-        });
-            const server = await device.gatt.connect();
-            const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-            rxChar = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
-            
-            document.getElementById('connBtn').innerText = "Connecté ✅";
-            document.getElementById('connBtn').style.background = "#28a745";
-            document.getElementById('ui').style.display = 'grid';
-        } catch (e) { alert("Erreur: " + e); }
+           });
+
+        // Écouter l'événement de déconnexion
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+        rx = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+
+        // Mise à jour visuelle du bouton
+        const btn = document.getElementById('btn');
+        btn.innerText = "CONNECTÉ ✅";
+        btn.style.background = "#28a745";
+        
+       } catch (e) { 
+            console.log("Erreur : " + e); 
+             onDisconnected(); // Remise à zéro si la connexion échoue
+         }
     }
+
+    // Cette fonction est appelée automatiquement quand le lien est rompu
+    function onDisconnected() {
+        const btn = document.getElementById('btn');
+        btn.innerText = "SE CONNECTER AU PICO";
+        btn.style.background = "#007bff";
+        rx = null; // On vide la caractéristique pour éviter d'envoyer dans le vide
+        console.log("Appareil déconnecté");
+      }
 
     function sendData(index, value) {
         document.getElementById('v' + index).innerText = value;
@@ -89,4 +108,5 @@
     }
 </script>
 </body>
+
 </html>
