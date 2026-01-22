@@ -1,36 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pico 32CH</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 10px; }
-        .header { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 15px; }
-        .card { background: white; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
-        .flex { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
-        button { padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-conn { background: #007bff; color: white; width: 100%; margin-bottom: 10px; }
-        .btn-preset { background: #007bff; color: white; flex: 1; margin: 2px; font-size: 0.7rem; }
-        .btn-send { background: #28a745; color: white; width: 100%; margin-top: 10px; font-size: 1rem; }
+        body { font-family: -apple-system, sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 5px; }
+        .header { background: white; padding: 10px; border-radius: 0 0 15px 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 6px; padding: 5px; }
+        .card { background: white; padding: 8px 10px; border-radius: 8px; border: 1px solid #ddd; }
+        .info { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; margin-bottom: 2px; }
+        button { padding: 8px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-conn { background: #007bff; color: white; width: 100%; margin-bottom: 8px; }
+        .btn-scale { background: #6c757d; color: white; flex: 1; }
         .active { background: #e67e22 !important; }
-        input[type=range] { width: 100%; }
+        .presets { display: flex; gap: 4px; margin-top: 8px; }
+        .btn-p { background: #007bff; color: white; flex: 1; font-size: 0.75rem; padding: 6px 0; }
+        .btn-send { background: #28a745; color: white; width: 100%; margin-top: 10px; font-size: 1.1rem; }
+        input[type=range] { width: 100%; height: 25px; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <button id="btn" class="btn-conn" onclick="connect()">SE CONNECTER</button>
-    <div style="display:flex; gap:5px;">
-        <button id="b100" class="active" style="flex:1" onclick="setScale(100)">100</button>
-        <button id="b1000" style="flex:1" onclick="setScale(1000)">1000</button>
+    <div style="display:flex; gap:8px; margin-bottom:5px;">
+        <button id="b100" class="btn-scale active" onclick="setScale(100)">100</button>
+        <button id="b1000" class="btn-scale" onclick="setScale(1000)">1000</button>
     </div>
-    <div style="display:flex; margin-top:5px;">
-        <button class="btn-preset" onclick="setAll(0)">0%</button>
-        <button class="btn-preset" onclick="setAll(25)">25%</button>
-        <button class="btn-preset" onclick="setAll(50)">50%</button>
-        <button class="btn-preset" onclick="setAll(75)">75%</button>
-        <button class="btn-preset" onclick="setAll(100)">100%</button>
+    <div class="presets">
+        <button class="btn-p" onclick="setAll(0)">0%</button>
+        <button class="btn-p" onclick="setAll(25)">25%</button>
+        <button class="btn-p" onclick="setAll(50)">50%</button>
+        <button class="btn-p" onclick="setAll(75)">75%</button>
+        <button class="btn-p" onclick="setAll(100)">100%</button>
     </div>
     <button id="btn-envoi" class="btn-send" onclick="sendTrigger()">ENVOYER TOUT</button>
 </div>
@@ -41,20 +44,20 @@
     let rx;
     let maxVal = 100;
 
-    // Génération immédiate des curseurs
+    // Création des 32 curseurs (V1 à V32)
     const ui = document.getElementById('ui');
     for (let i = 0; i < 32; i++) {
         ui.innerHTML += `
             <div class="card">
-                <div class="flex"><span>V${i+1}</span><span id="v${i}" style="color:#007bff">0</span></div>
+                <div class="info"><span>V${i+1}</span><span id="v${i}" style="color:#007bff">0</span></div>
                 <input type="range" id="s${i}" min="0" max="100" value="0" oninput="send(${i}, this.value)">
             </div>`;
     }
 
     function setScale(s) {
         maxVal = s;
-        document.getElementById('b100').className = (s==100)?'active':'';
-        document.getElementById('b1000').className = (s==1000)?'active':'';
+        document.getElementById('b100').className = (s==100)?'btn-scale active':'btn-scale';
+        document.getElementById('b1000').className = (s==1000)?'btn-scale active':'btn-scale';
         for (let i = 0; i < 32; i++) { document.getElementById('s' + i).max = s; }
     }
 
@@ -84,7 +87,7 @@
     async function sendTrigger() {
         if (rx) {
             await rx.writeValue(new TextEncoder().encode("99:99"));
-            let b = document.getElementById('btn-envoi');
+            const b = document.getElementById('btn-envoi');
             b.innerText = "TRANSMI !";
             setTimeout(() => { b.innerText = "ENVOYER TOUT"; }, 1000);
         }
