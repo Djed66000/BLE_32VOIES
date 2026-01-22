@@ -67,13 +67,34 @@
                 filters: [{ name: 'P32' }],
                 optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
             });
+
+            // --- CETTE PARTIE GÈRE LA DÉCONNEXION AUTOMATIQUE ---
+            device.addEventListener('gattserverdisconnected', () => {
+                const btn = document.getElementById('btn');
+                btn.innerText = "SE CONNECTER";
+                btn.style.background = "#007bff";
+                rx = null; // Sécurité : on empêche l'envoi de données
+                console.log("Appareil déconnecté");
+            });
+            // ---------------------------------------------------
+
             const server = await device.gatt.connect();
             const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
             rx = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
-            document.getElementById('btn').innerText = "CONNECTÉ ✅";
-            document.getElementById('btn').style.background = "#28a745";
-        } catch (e) { alert("Erreur : " + e); }
-    }
+            
+            // Mise à jour si succès
+            const btn = document.getElementById('btn');
+            btn.innerText = "CONNECTÉ ✅";
+            btn.style.background = "#28a745";
+
+            } catch (e) { 
+            console.log("Erreur : " + e);
+            // En cas d'échec de la tentative de connexion, on s'assure que le bouton est bleu
+            const btn = document.getElementById('btn');
+            btn.innerText = "SE CONNECTER";
+            btn.style.background = "#007bff";
+            }
+        }
 
     function setAll(pct) {
         let val = Math.round((pct / 100) * maxVal);
@@ -100,3 +121,4 @@
 </script>
 </body>
 </html>
+
