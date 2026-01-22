@@ -59,6 +59,8 @@
         document.getElementById('b100').className = (s==100)?'btn-scale active':'btn-scale';
         document.getElementById('b1000').className = (s==1000)?'btn-scale active':'btn-scale';
         for (let i = 0; i < 32; i++) { document.getElementById('s' + i).max = s; }
+        // NOUVEAU : On informe le Pico du changement d'échelle (code spécial 98:échelle)
+        if (rx) rx.writeValue(new TextEncoder().encode("98:" + s));
     }
 
     async function connect() {
@@ -121,4 +123,5 @@
 </script>
 </body>
 </html>
+
 
